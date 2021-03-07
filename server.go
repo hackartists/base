@@ -1,28 +1,40 @@
 package base
 
 import (
-	"log"
-	"net/http"
-	"time"
+	"github.com/gin-gonic/gin"
 )
 
 // Server provides a server.
 type Server struct {
-	s *http.Server
+	g       *gin.Engine
+	version string
 }
 
 func Default() *Server {
+	g := gin.Default()
+
 	return &Server{
-		s: &http.Server{
-			Addr:           ":8080",
-			ReadTimeout:    10 * time.Second,
-			WriteTimeout:   10 * time.Second,
-			MaxHeaderBytes: 1 << 20,
-		},
+		g: g,
 	}
 }
 
 func (r *Server) Serve() error {
-	log.Fatal(r)
-	return r.s.ListenAndServe()
+	r.g.GET("/version", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"version": "v0.1.0",
+		})
+	})
+
+	return r.g.Run()
+}
+
+func (r *Server) Group(path string, gr GroupRouter) *RouteGroup {
+	ret := &RouteGroup{
+		rg: r.g.Group(path),
+		gr: gr,
+	}
+
+	gr.Route(ret)
+
+	return ret
 }
