@@ -60,6 +60,10 @@ func (r *RouteGroup) PUT(url string, handler interface{}, opts ...interface{}) e
 	return r.createHandler(r.rg.PUT, url, handler)
 }
 
+func (r *RouteGroup) PATCH(url string, handler interface{}, opts ...interface{}) error {
+	return r.createHandler(r.rg.PATCH, url, handler)
+}
+
 func (r *RouteGroup) HEAD(url string, handler interface{}, opts ...interface{}) error {
 	return r.createHandler(r.rg.HEAD, url, handler)
 }
