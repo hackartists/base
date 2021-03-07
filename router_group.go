@@ -99,7 +99,6 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 	method(url, func(c *gin.Context) {
 		var result interface{}
 		var err StatefulError
-		h := reflect.ValueOf(handler)
 
 		defer func() {
 			if e := recover(); e != nil {
@@ -143,7 +142,7 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 		}
 		inputs[0] = reflect.ValueOf(&Context{Context: c})
 
-		outs := h.Call(inputs)
+		outs := handle.Call(inputs)
 		result = outs[0].Interface()
 		if ei := outs[1].Interface(); ei != nil {
 			err = ei.(StatefulError)
