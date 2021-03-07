@@ -1,6 +1,7 @@
 package base
 
 import (
+	"log"
 	"net/http"
 	"reflect"
 
@@ -72,8 +73,9 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 	if handleType.NumOut() != 2 {
 		panic("handler must returns two outputs; owned response and base error.")
 	}
-	if _, ok := handleType.Out(1).(StatefulError); !ok {
-		panic("the second return parameter must be `base.Error`.")
+
+	if !handleType.Out(1).Implements(reflect.TypeOf((*StatefulError)(nil)).Elem()) {
+		panic("the second return parameter must implement functions of  `base.StatefulError`.")
 	}
 
 	handle := reflect.ValueOf(handler)
@@ -96,15 +98,18 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 
 	method(url, func(c *gin.Context) {
 		var result interface{}
-		var err = (StatefulError)(ErrUnknown)
+		var err StatefulError
+		h := reflect.ValueOf(handler)
 
 		defer func() {
 			if e := recover(); e != nil {
+				err = ErrUnknown
+				log.Println(e)
 				if v, ok := e.(StatefulError); ok {
 					err = v
 				}
 				// TODO: logs request and stack
-				c.JSON(err.Status(), ErrUnknown)
+				c.JSON(err.Status(), err)
 				return
 			}
 
@@ -134,12 +139,15 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 				panic(ErrParseRequest.SetDetails("path"))
 			}
 
+			inputs[i] = input.Elem()
 		}
 		inputs[0] = reflect.ValueOf(&Context{Context: c})
 
-		outs := handle.Call(inputs)
+		outs := h.Call(inputs)
 		result = outs[0].Interface()
-		err = outs[1].Interface().(StatefulError)
+		if ei := outs[1].Interface(); ei != nil {
+			err = ei.(StatefulError)
+		}
 	})
 
 	return nil
