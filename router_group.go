@@ -143,6 +143,7 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 			}
 
 			inputs[i] = input.Elem()
+			log.Printf("req%d: %+v\n", i, iface)
 		}
 		inputs[0] = reflect.ValueOf(&Context{Context: c})
 
