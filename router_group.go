@@ -132,6 +132,8 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 			if _, ok := iface.(JSONRequester); ok && c.ShouldBindJSON(iface) != nil {
 				panic(ErrParseRequest.SetDetails("json"))
 			}
+
+			log.Printf("req%d: %+v\n", i, iface)
 			if _, ok := iface.(QueryOrFormRequester); ok && c.ShouldBindQuery(iface) != nil {
 				panic(ErrParseRequest.SetDetails("query or form"))
 			}
@@ -139,7 +141,7 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 				panic(ErrParseRequest.SetDetails("path"))
 			}
 			if _, ok := iface.(HeaderRequester); ok && c.ShouldBindHeader(iface) != nil {
-				panic(ErrParseRequest.SetDetails("path"))
+				panic(ErrParseRequest.SetDetails("header"))
 			}
 
 			inputs[i] = input.Elem()
