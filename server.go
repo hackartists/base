@@ -1,6 +1,7 @@
 package base
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -30,14 +31,14 @@ func Default() *Server {
 	}
 }
 
-func (r *Server) Serve() error {
+func (r *Server) Serve(port int) error {
 	r.g.GET("/version", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"version": "v0.1.0",
 		})
 	})
 
-	return r.g.Run()
+	return r.g.Run(fmt.Sprintf(":%d", port))
 }
 
 func (r *Server) Group(path string, gr GroupRouter) *RouteGroup {
