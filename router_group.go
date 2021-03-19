@@ -28,6 +28,14 @@ type GroupRouter interface {
 	Route(rg *RouteGroup)
 }
 
+type Defaulter interface {
+	Default()
+}
+
+type PostValidator interface {
+	PostValidator() StatefulError
+}
+
 type RouteGroup struct {
 	rg *gin.RouterGroup
 	gr GroupRouter
@@ -218,6 +226,9 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 		for i := 1; i < inNum; i++ {
 			input := reflect.New(inputTypes[i])
 			iface := input.Interface()
+			if v, ok := iface.(Defaulter); ok {
+				v.Default()
+			}
 
 			if _, ok := iface.(JSONRequester); ok && c.ShouldBindJSON(iface) != nil {
 				panic(ErrParseRequest.SetDetails("json"))
@@ -232,6 +243,11 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 			}
 			if _, ok := iface.(HeaderRequester); ok && c.ShouldBindHeader(iface) != nil {
 				panic(ErrParseRequest.SetDetails("header"))
+			}
+			if v, ok := iface.(PostValidator); ok {
+				if err := v.PostValidator(); err != nil {
+					panic(err.SetDetails("post validator error"))
+				}
 			}
 
 			inputs[i] = input.Elem()

@@ -14,6 +14,7 @@ type StatefulError interface {
 	Status() int
 	Code() int
 	Details() interface{}
+	SetDetails(interface{}) StatefulError
 }
 
 type Error struct {
@@ -49,7 +50,7 @@ func (r *Error) Details() interface{} {
 	return r.details
 }
 
-func (r *Error) SetDetails(details interface{}) *Error {
+func (r *Error) SetDetails(details interface{}) StatefulError {
 	ret := *r
 
 	ret.details = details
