@@ -98,13 +98,13 @@ func updateLogHandlers(logLevel string) {
 
 func makeLog(lvl zapcore.Level) func(context.Context, ...interface{}) {
 	return func(ctx context.Context, args ...interface{}) {
-		logf(ctx, lvl, "", args)
+		logf(ctx, lvl, "", args...)
 	}
 }
 
 func makeLogf(lvl zapcore.Level) func(context.Context, string, ...interface{}) {
 	return func(ctx context.Context, format string, args ...interface{}) {
-		logf(ctx, lvl, format, args)
+		logf(ctx, lvl, format, args...)
 	}
 }
 

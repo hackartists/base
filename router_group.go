@@ -1,11 +1,16 @@
 package base
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"reflect"
+	"runtime"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mad-app/base/blog"
+	"go.uber.org/zap"
 )
 
 type JSONRequester interface {
@@ -34,6 +39,22 @@ type Defaulter interface {
 
 type PostValidator interface {
 	PostValidator() StatefulError
+}
+
+type APIContext struct {
+	context.Context
+
+	method  string
+	url     string
+	handler string
+}
+
+func (r *APIContext) Sweeten() []zap.Field {
+	return []zap.Field{
+		zap.Any("method", r.method),
+		zap.Any("url", r.url),
+		zap.Any("handler", r.handler),
+	}
 }
 
 type RouteGroup struct {
@@ -167,6 +188,16 @@ func (r *RouteGroup) HEAD(url string, handler interface{}, opts ...interface{}) 
 }
 
 func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.IRoutes, url string, handler interface{}) error {
+	handle := reflect.ValueOf(handler)
+	mns := strings.Split(runtime.FuncForPC(reflect.ValueOf(method).Pointer()).Name(), ".")
+	mn := strings.Trim(mns[len(mns)-1], "-fm")
+	hn := strings.Trim(runtime.FuncForPC(handle.Pointer()).Name(), "-fm")
+	ac := &APIContext{
+		method:  mn,
+		url:     r.rg.BasePath() + "/" + url,
+		handler: hn,
+	}
+	blog.Infof(ac, "Registered: %s %s%s", mn, r.rg.BasePath(), url)
 	handleType := reflect.TypeOf(handler)
 
 	if handleType.Kind() != reflect.Func {
@@ -180,7 +211,6 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 		panic("the second return parameter must implement functions of  `base.StatefulError`.")
 	}
 
-	handle := reflect.ValueOf(handler)
 	if handle.IsZero() || handle.IsNil() || !handle.IsValid() {
 		panic("handler must be set before registration; could not be nil")
 	}

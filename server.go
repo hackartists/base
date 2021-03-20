@@ -17,15 +17,14 @@ type Server struct {
 }
 
 func Default() *Server {
+	gin.SetMode(gin.ReleaseMode)
 	g := gin.Default()
 	log := blog.Log()
-	gin.SetMode(gin.ReleaseMode)
 
-	g.Use(gin.Recovery())
+	g.Use(ginzap.RecoveryWithZap(log, true))
 	// g.Use(limit.Limit(conf.MaxConcurrentReq))
 	// g.Use(limits.RequestSizeLimiter(conf.MaxPostSize))
 	g.Use(ginzap.Ginzap(log, time.RFC3339, true))
-	g.Use(ginzap.RecoveryWithZap(log, true))
 	g.Use(cors.New(cors.Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
