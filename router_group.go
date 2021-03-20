@@ -130,7 +130,7 @@ func (r *RouteGroup) Use(handler interface{}) error {
 			inputs[i] = input.Elem()
 			log.Printf("req%d: %+v\n", i, iface)
 		}
-		inputs[0] = reflect.ValueOf(&Context{Context: c})
+		inputs[0] = reflect.ValueOf(NewContext(c))
 
 		outs := handle.Call(inputs)
 		if ei := outs[0].Interface(); ei != nil {
@@ -253,7 +253,7 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 			inputs[i] = input.Elem()
 			log.Printf("req%d: %+v\n", i, iface)
 		}
-		inputs[0] = reflect.ValueOf(&Context{Context: c})
+		inputs[0] = reflect.ValueOf(NewContext(c))
 
 		outs := handle.Call(inputs)
 		result = outs[0].Interface()
