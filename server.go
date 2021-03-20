@@ -19,6 +19,7 @@ type Server struct {
 func Default() *Server {
 	g := gin.Default()
 	log := blog.Log()
+	gin.SetMode(gin.ReleaseMode)
 
 	g.Use(gin.Recovery())
 	// g.Use(limit.Limit(conf.MaxConcurrentReq))
