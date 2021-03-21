@@ -37,7 +37,7 @@ type Defaulter interface {
 }
 
 type PostValidator interface {
-	PostValidator() StatefulError
+	PostValidator(*Context) StatefulError
 }
 
 type APIContext struct {
@@ -253,7 +253,7 @@ func (r *RouteGroup) parseRequest(ctx *Context, inNum int, inputTypes []reflect.
 		}
 
 		if v, ok := iface.(PostValidator); ok {
-			if err := v.PostValidator(); err != nil {
+			if err := v.PostValidator(ctx); err != nil {
 				panic(err)
 			}
 		}
