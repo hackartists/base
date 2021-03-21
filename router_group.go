@@ -107,8 +107,15 @@ func (r *RouteGroup) Use(handler interface{}) error {
 	r.rg.Use(func(c *gin.Context) {
 		var err StatefulError
 		ctx := NewContext(c)
-
-		defer r.success(ctx, err)
+		defer func() {
+			if e := recover(); e != nil {
+				err = ErrUnknown
+				if v, ok := e.(StatefulError); ok {
+					err = v
+				}
+			}
+			r.success(ctx, err)
+		}()
 
 		outs := handle.Call(r.parseRequest(ctx, inNum, inputTypes))
 		if ei := outs[0].Interface(); ei != nil {
@@ -191,6 +198,13 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 		ctx := NewContext(c)
 
 		defer func() {
+			if e := recover(); e != nil {
+				err = ErrUnknown
+				if v, ok := e.(StatefulError); ok {
+					err = v
+				}
+			}
+
 			if r.success(ctx, err) {
 				c.JSON(http.StatusOK, result)
 			}
@@ -246,12 +260,6 @@ func (r *RouteGroup) parseRequest(ctx *Context, inNum int, inputTypes []reflect.
 }
 func (r *RouteGroup) success(ctx *Context, err StatefulError) bool {
 	c := ctx.Context
-	if e := recover(); e != nil {
-		err = ErrUnknown
-		if v, ok := e.(StatefulError); ok {
-			err = v
-		}
-	}
 
 	if err != nil {
 		blog.Error(ctx, err.Error())
