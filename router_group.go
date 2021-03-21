@@ -226,6 +226,9 @@ func (r *RouteGroup) parseRequest(ctx *Context, inNum int, inputTypes []reflect.
 	for i := 1; i < inNum; i++ {
 		input := reflect.New(inputTypes[i])
 		iface := input.Interface()
+		if v, ok := iface.(Defaulter); ok {
+			v.Default()
+		}
 
 		if _, ok := iface.(JSONRequester); ok {
 			if err := c.ShouldBindJSON(iface); err != nil {
@@ -233,7 +236,6 @@ func (r *RouteGroup) parseRequest(ctx *Context, inNum int, inputTypes []reflect.
 			}
 		}
 
-		blog.Debugf(ctx, "req%d: %+v\n", i, iface)
 		if _, ok := iface.(QueryOrFormRequester); ok {
 			if err := c.ShouldBindQuery(iface); err != nil {
 				panic(ErrParseRequest.SetDetails(err.Error()))
@@ -247,6 +249,12 @@ func (r *RouteGroup) parseRequest(ctx *Context, inNum int, inputTypes []reflect.
 		if _, ok := iface.(HeaderRequester); ok {
 			if err := c.ShouldBindHeader(iface); err != nil {
 				panic(ErrParseRequest.SetDetails(err.Error()))
+			}
+		}
+
+		if v, ok := iface.(PostValidator); ok {
+			if err := v.PostValidator(); err != nil {
+				panic(err)
 			}
 		}
 
