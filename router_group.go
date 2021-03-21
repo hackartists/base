@@ -2,7 +2,6 @@ package base
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -107,53 +106,11 @@ func (r *RouteGroup) Use(handler interface{}) error {
 
 	r.rg.Use(func(c *gin.Context) {
 		var err StatefulError
+		ctx := NewContext(c)
 
-		defer func() {
-			if e := recover(); e != nil {
-				err = ErrUnknown
-				log.Println(e)
-				if v, ok := e.(StatefulError); ok {
-					err = v
-				}
-				// TODO: logs request and stack
-				c.JSON(err.Status(), err)
-				c.Abort()
-				return
-			}
+		defer r.success(ctx, err)
 
-			if err != nil {
-				c.JSON(err.Status(), err)
-				c.Abort()
-				return
-			}
-		}()
-
-		inputs := make([]reflect.Value, inNum)
-		for i := 1; i < inNum; i++ {
-			input := reflect.New(inputTypes[i])
-			iface := input.Interface()
-
-			if _, ok := iface.(JSONRequester); ok && c.ShouldBindJSON(iface) != nil {
-				panic(ErrParseRequest.SetDetails("json"))
-			}
-
-			log.Printf("req%d: %+v\n", i, iface)
-			if _, ok := iface.(QueryOrFormRequester); ok && c.ShouldBindQuery(iface) != nil {
-				panic(ErrParseRequest.SetDetails("query or form"))
-			}
-			if _, ok := iface.(PathRequester); ok && c.ShouldBindUri(iface) != nil {
-				panic(ErrParseRequest.SetDetails("path"))
-			}
-			if _, ok := iface.(HeaderRequester); ok && c.ShouldBindHeader(iface) != nil {
-				panic(ErrParseRequest.SetDetails("header"))
-			}
-
-			inputs[i] = input.Elem()
-			log.Printf("req%d: %+v\n", i, iface)
-		}
-		inputs[0] = reflect.ValueOf(NewContext(c))
-
-		outs := handle.Call(inputs)
+		outs := handle.Call(r.parseRequest(ctx, inNum, inputTypes))
 		if ei := outs[0].Interface(); ei != nil {
 			err = ei.(StatefulError)
 		}
@@ -231,61 +188,15 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 	method(url, func(c *gin.Context) {
 		var result interface{}
 		var err StatefulError
+		ctx := NewContext(c)
 
 		defer func() {
-			if e := recover(); e != nil {
-				err = ErrUnknown
-				log.Println(e)
-				if v, ok := e.(StatefulError); ok {
-					err = v
-				}
-				// TODO: logs request and stack
-				c.JSON(err.Status(), err)
-				return
+			if r.success(ctx, err) {
+				c.JSON(http.StatusOK, result)
 			}
-
-			if err != nil {
-				c.JSON(err.Status(), err)
-				return
-			}
-
-			c.JSON(http.StatusOK, result)
 		}()
 
-		inputs := make([]reflect.Value, inNum)
-		for i := 1; i < inNum; i++ {
-			input := reflect.New(inputTypes[i])
-			iface := input.Interface()
-			if v, ok := iface.(Defaulter); ok {
-				v.Default()
-			}
-
-			if _, ok := iface.(JSONRequester); ok && c.ShouldBindJSON(iface) != nil {
-				panic(ErrParseRequest.SetDetails("json"))
-			}
-
-			log.Printf("req%d: %+v\n", i, iface)
-			if _, ok := iface.(QueryOrFormRequester); ok && c.ShouldBindQuery(iface) != nil {
-				panic(ErrParseRequest.SetDetails("query or form"))
-			}
-			if _, ok := iface.(PathRequester); ok && c.ShouldBindUri(iface) != nil {
-				panic(ErrParseRequest.SetDetails("path"))
-			}
-			if _, ok := iface.(HeaderRequester); ok && c.ShouldBindHeader(iface) != nil {
-				panic(ErrParseRequest.SetDetails("header"))
-			}
-			if v, ok := iface.(PostValidator); ok {
-				if err := v.PostValidator(); err != nil {
-					panic(err.SetDetails("post validator error"))
-				}
-			}
-
-			inputs[i] = input.Elem()
-			log.Printf("req%d: %+v\n", i, iface)
-		}
-		inputs[0] = reflect.ValueOf(NewContext(c))
-
-		outs := handle.Call(inputs)
+		outs := handle.Call(r.parseRequest(ctx, inNum, inputTypes))
 		result = outs[0].Interface()
 		if ei := outs[1].Interface(); ei != nil {
 			err = ei.(StatefulError)
@@ -293,4 +204,61 @@ func (r *RouteGroup) createHandler(method func(string, ...gin.HandlerFunc) gin.I
 	})
 
 	return nil
+}
+
+func (r *RouteGroup) parseRequest(ctx *Context, inNum int, inputTypes []reflect.Type) []reflect.Value {
+	c := ctx.Context
+	inputs := make([]reflect.Value, inNum)
+	for i := 1; i < inNum; i++ {
+		input := reflect.New(inputTypes[i])
+		iface := input.Interface()
+
+		if _, ok := iface.(JSONRequester); ok {
+			if err := c.ShouldBindJSON(iface); err != nil {
+				panic(ErrParseRequest.SetDetails(err.Error()))
+			}
+		}
+
+		blog.Debugf(ctx, "req%d: %+v\n", i, iface)
+		if _, ok := iface.(QueryOrFormRequester); ok {
+			if err := c.ShouldBindQuery(iface); err != nil {
+				panic(ErrParseRequest.SetDetails(err.Error()))
+			}
+		}
+		if _, ok := iface.(PathRequester); ok {
+			if err := c.ShouldBindUri(iface); err != nil {
+				panic(ErrParseRequest.SetDetails(err.Error()))
+			}
+		}
+		if _, ok := iface.(HeaderRequester); ok {
+			if err := c.ShouldBindHeader(iface); err != nil {
+				panic(ErrParseRequest.SetDetails(err.Error()))
+			}
+		}
+
+		inputs[i] = input.Elem()
+		blog.Debugf(ctx, "req%d: %+v\n", i, iface)
+	}
+
+	inputs[0] = reflect.ValueOf(ctx)
+
+	return inputs
+}
+func (r *RouteGroup) success(ctx *Context, err StatefulError) bool {
+	c := ctx.Context
+	if e := recover(); e != nil {
+		err = ErrUnknown
+		if v, ok := e.(StatefulError); ok {
+			err = v
+		}
+	}
+
+	if err != nil {
+		blog.Error(ctx, err.Error())
+		c.JSON(err.Status(), err)
+		c.Abort()
+		return false
+	}
+
+	return true
 }
