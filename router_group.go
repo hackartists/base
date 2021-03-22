@@ -12,6 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var m = map[string]interface{}{}
+
 type JSONRequester interface {
 	JSONRequest()
 }
@@ -66,6 +68,8 @@ func (r *RouteGroup) Group(path string, gr GroupRouter) *RouteGroup {
 		rg: r.rg.Group(path),
 		gr: gr,
 	}
+
+	m[ret.rg.BasePath()] = gr
 
 	gr.Route(ret)
 
@@ -277,4 +281,8 @@ func (r *RouteGroup) success(ctx *Context, err StatefulError) bool {
 	}
 
 	return true
+}
+
+func GetRouter(path string) interface{} {
+	return m[path]
 }

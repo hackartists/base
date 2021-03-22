@@ -46,6 +46,8 @@ func (r *Server) Serve(port int) error {
 		})
 	})
 
+	blog.Infof(nil, "%+v", m)
+
 	return r.g.Run(fmt.Sprintf(":%d", port))
 }
 
@@ -54,6 +56,7 @@ func (r *Server) Group(path string, gr GroupRouter) *RouteGroup {
 		rg: r.g.Group(path),
 		gr: gr,
 	}
+	m[ret.rg.BasePath()] = gr
 
 	gr.Route(ret)
 
