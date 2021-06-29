@@ -38,7 +38,7 @@ func Init(level string) {
 			Initial:    100,
 			Thereafter: 100,
 		},
-		Encoding: "json",
+		Encoding: "console",
 		EncoderConfig: zapcore.EncoderConfig{
 			TimeKey:        "ts",
 			LevelKey:       "level",
@@ -48,7 +48,7 @@ func Init(level string) {
 			MessageKey:     "msg",
 			StacktraceKey:  "stacktrace",
 			LineEnding:     zapcore.DefaultLineEnding,
-			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeLevel:    zapcore.CapitalColorLevelEncoder,
 			EncodeTime:     zapcore.EpochTimeEncoder,
 			EncodeDuration: zapcore.SecondsDurationEncoder,
 			EncodeCaller:   zapcore.ShortCallerEncoder,
@@ -122,6 +122,20 @@ func logf(ctx context.Context, lvl zapcore.Level, format string, args ...interfa
 			sf = c.Sweeten()
 		}
 	}
+	/*
+		logger := zap.NewExample()
+		defer logger.Sync()
+
+		if ce := logger.Check(zap.DebugLevel, "debugging"); ce != nil {
+			If debug-level log output isn't enabled or if zap's sampling would have
+			dropped this log entry, we don't allocate the slice that holds these
+			fields.
+			ce.Write(
+				zap.String("foo", "bar"),
+				zap.String("baz", "quux"),
+			)
+		}
+	*/
 	if ce := l.Check(lvl, msg); ce != nil {
 		ce.Write(sf...)
 	}
