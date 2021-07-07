@@ -16,6 +16,24 @@ type Server struct {
 	version string
 }
 
+func Test() *Server {
+	gin.SetMode(gin.ReleaseMode)
+	g := gin.New()
+
+	g.Use(cors.New(cors.Config{
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+		AllowWebSockets:  true,
+		AllowAllOrigins:  true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	return &Server{
+		g: g,
+	}
+}
+
 func Default() *Server {
 	gin.SetMode(gin.ReleaseMode)
 	g := gin.New()
