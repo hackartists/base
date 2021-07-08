@@ -32,7 +32,7 @@ func Log() *zap.Logger {
 
 func Init(level string) {
 	config := zap.Config{
-		Level:       zap.NewAtomicLevelAt(zapcore.InfoLevel),
+		Level:       zap.NewAtomicLevelAt(zapcore.ErrorLevel),
 		Development: false,
 		Sampling: &zap.SamplingConfig{
 			Initial:    100,
