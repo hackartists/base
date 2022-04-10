@@ -113,10 +113,17 @@ func (r *RouteGroup) Use(handler interface{}) error {
 		ctx := NewContext(c)
 		defer func() {
 			if e := recover(); e != nil {
-				err = ErrUnknown
 				if v, ok := e.(StatefulError); ok {
 					err = v
+				} else {
+					err = ErrUnknown
 				}
+				c.AbortWithStatusJSON(err.Status(), map[string]interface{}{
+					"code":    err.Code(),
+					"message": err.Error(),
+					"details": err.Details(),
+				})
+				return
 			}
 			r.success(ctx, err)
 		}()
