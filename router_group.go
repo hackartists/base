@@ -83,7 +83,7 @@ func (r *RouteGroup) Use(handler interface{}) error {
 		panic("invalid handler type; handler must be a function")
 	}
 	if handleType.NumOut() != 1 {
-		panic("handler must returns two outputs; owned response and base error.")
+		panic("handler must returns one output; base error.")
 	}
 
 	if !handleType.Out(0).Implements(reflect.TypeOf((*StatefulError)(nil)).Elem()) {

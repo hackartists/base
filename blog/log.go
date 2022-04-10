@@ -3,6 +3,7 @@ package blog
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -31,8 +32,14 @@ func Log() *zap.Logger {
 }
 
 func Init(level string) {
+	var lvl zapcore.Level
+	if err := lvl.UnmarshalText([]byte(level)); err != nil {
+		log.Fatalln(err.Error())
+		return
+	}
+
 	config := zap.Config{
-		Level:       zap.NewAtomicLevelAt(zapcore.ErrorLevel),
+		Level:       zap.NewAtomicLevelAt(lvl),
 		Development: false,
 		Sampling: &zap.SamplingConfig{
 			Initial:    100,
